@@ -101,4 +101,11 @@
       (n4js-send-current-region)
     (n4js-send-paragraph)))
 
+(defun n4js-switch-to-buffer ()
+  "Switch to neo4j shell buffer"
+  (interactive)
+  (if (comint-check-proc "*neo4j-shell*")
+      (switch-to-buffer "*neo4j-shell*")
+    (n4js-start)))
+
 (provide 'n4js)
