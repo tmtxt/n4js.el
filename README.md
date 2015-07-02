@@ -112,3 +112,7 @@ that project folder (or any buffer with `default-directory` inside the project
 folder) so that when running the start command, it will run with the cwd is the
 `default-directory`. You only need to do this once when you call the command
 `n4js-start`.
+
+# 6. Demo
+
+![Neo4j shell inside Emacs](demo.png)
