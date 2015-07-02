@@ -61,6 +61,8 @@ Usually you don't need to change this variable.
 the whole buffer to neo4j shell process
 - `n4js-send-dwim`: send the current region if active, otherwise send the
 paragraph at point to neo4j shell process
+- `n4js-switch-to-buffer`: switch to neo4j shell buffer if exist, otherwise,
+start a new one
 
 # 5. Tips
 
