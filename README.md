@@ -66,7 +66,7 @@ start a new one
 
 ## Connect to a Neo4j shell with option
 
-If the neo4j shell instance is running with a different port other than the
+If the neo4j shell instance is running on a different port other than the
 default 1337, add this to your .emacs
 
 ```lisp
