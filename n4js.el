@@ -1,7 +1,9 @@
 ;;; dependencies: cypher-mode
 
 ;;; emacs neo4j shell
+(require 'comint)
 (require 'cypher-mode)
+
 (defvar n4js-cli-program "neo4j-shell"
   "The cli program to start neo4j shell")
 
@@ -17,7 +19,7 @@
 (defvar n4js-pop-to-buffer-function 'pop-to-buffer
   "The function to pop up the neo4j shell buffer")
 
-(define-derived-mode neo4j-shell-mode comint-mode "Neo4j Shell"
+(define-derived-mode n4js-mode comint-mode "Neo4j Shell"
   "Major mode for `n4js-start'."
   ;; not allow the prompt to be deleted
   (setq comint-prompt-read-only t)
@@ -37,7 +39,7 @@
     ;; pop to the "*neo4j-shell*" buffer if the process is dead, the
     ;; buffer is missing or it's got the wrong mode.
     (pop-to-buffer-same-window
-     (if (or buffer (not (derived-mode-p 'neo4j-shell-mode))
+     (if (or buffer (not (derived-mode-p 'n4js-mode))
              (comint-check-proc (current-buffer)))
          (get-buffer-create "*neo4j-shell*")
        (current-buffer)))
@@ -45,7 +47,7 @@
     (unless buffer
       (apply 'make-comint-in-buffer "neo4j-shell" nil n4js-cli-program nil
              n4js-cli-arguments)
-      (neo4j-shell-mode))))
+      (n4js-mode))))
 
 ;;; Send the query string to neo4j shell to execute
 (defun n4js-send-string (string)
