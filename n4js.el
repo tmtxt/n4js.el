@@ -5,7 +5,7 @@
 ;;; Author: TruongTx <me@truongtx.me>
 ;;; Version: 0.1
 ;;; URL: https://github.com/tmtxt/n4js.el
-;;; Package-Requires: ((emacs "24"))
+;;; Package-Requires: ((emacs "24") (cypher-mode "20140807.950"))
 ;;; Keywords: neo4j, shell, comint
 
 ;;; License:
