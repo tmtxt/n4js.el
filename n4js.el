@@ -65,6 +65,7 @@
 
 ;;; Taken from masteringemacs with some changes
 ;;; https://www.masteringemacs.org/article/comint-writing-command-interpreter
+;;;###autoload
 (defun n4js-start ()
   "Start neo4j shell comint mode."
   (interactive)
@@ -136,6 +137,7 @@
       (n4js-send-current-region)
     (n4js-send-paragraph)))
 
+;;;###autoload
 (defun n4js-switch-to-buffer ()
   "Switch to neo4j shell buffer."
   (interactive)
