@@ -30,7 +30,7 @@
 
 ;; (require 'n4js)
 
-;; Type M-x n4js-repl to run Neo4j Shell.
+;; Type M-x n4js-start to run Neo4j Shell.
 ;; See also `comint-mode' to check key bindings.
 
 (require 'comint)
