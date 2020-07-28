@@ -25,7 +25,7 @@
 
 ;;; Commentary:
 
-;; Put this file in your Emacs lisp path (e.g. ~/.emacs.d/site-lisp)
+;; Put this file in your Emacs Lisp path (e.g. ~/.emacs.d/site-lisp)
 ;; and add the following line to your .emacs:
 
 ;; (require 'n4js)
@@ -37,11 +37,18 @@
 (require 'cypher-mode)
 
 ;;; Code:
-(defvar n4js-cli-program "neo4j-shell"
-  "The cli program to start neo4j shell.")
+(defvar n4js-cli-program "cypher-shell"
+  "The cli program to start neo4j cypher shell.")
 
-(defvar n4js-cli-arguments '()
-  "List of command line arguments to pass to neo4j shell cli programm.")
+(defvar n4js-username "neo4j")
+
+(defvar n4js-password t
+  "Neo4j password for ‘n4js-username’.
+If t, password will be read interactively. If nil, do not use
+password.")
+
+(defvar n4js-cli-other-arguments nil
+  "List of command line arguments to pass to neo4j cypher shell cli program.")
 
 (defvar n4js-font-lock-keywords cypher-font-lock-keywords
   "Font lock keywords list, default is to taken from cypher-mode.")
@@ -52,49 +59,91 @@
 (defvar n4js-pop-to-buffer-function 'pop-to-buffer
   "The function to pop up the neo4j shell buffer.")
 
-(define-derived-mode n4js-mode comint-mode "Neo4j Shell"
+(defvar n4js-buffer-name "*cypher-shell*"
+  "Buffer name for cypher shell.")
+
+(defvar n4js-process-name "neo4j-cypher-shell"
+  "Buffer name for cypher shell.")
+
+(defvar n4js-switch-to-buffer-key (kbd "C-c c-s")
+  "Key that calls ‘n4js-switch-to-buffer’ in the buffer where ‘n4js-start’ was invoked.")
+
+(define-derived-mode n4js-mode comint-mode "Neo4j Cypher Shell"
   "Major mode for `n4js-start'."
   ;; not allow the prompt to be deleted
   (setq comint-prompt-read-only t)
+  (define-key n4js-mode-map (kbd "<RET>") #'n4js-send-input)
   ;; font lock keywords
   (set (make-local-variable 'font-lock-defaults) '(n4js-font-lock-keywords t)))
 
 (defun n4js-pop-to-buffer ()
-  "Pop the neo4j shell buffer to the current window."
-  (apply n4js-pop-to-buffer-function '("*neo4j-shell*")))
+  "Pop the neo4j cypher shell buffer to the current window."
+  (apply n4js-pop-to-buffer-function (list n4js-buffer-name)))
+
+(defun n4js-send-input (&optional no-newline artificial)
+  "Send input to cypher-shell process.
+
+It checks if the cypher statement is over, and if so it sends it
+to the process. If not, it accumulates the input, adding a
+newline. The arguments NO-NEWLINE and ARTIFICIAL are passed on to
+‘comind-send-input’."
+  (interactive)
+  (if (prog2
+	  (beginning-of-line)
+	  (or (looking-at-p (rx (* anything) ";" (0+ space) line-end))
+	      (looking-at-p (rx (0+ space) ":")))
+	(end-of-line))
+      (comint-send-input no-newline artificial)
+    (comint-accumulate)))
 
 ;;; Taken from masteringemacs with some changes
 ;;; https://www.masteringemacs.org/article/comint-writing-command-interpreter
 ;;;###autoload
-(defun n4js-start ()
-  "Start neo4j shell comint mode."
-  (interactive)
-  (let ((buffer (comint-check-proc "*neo4j-shell*")))
-    ;; pop to the "*neo4j-shell*" buffer if the process is dead, the
+(defun n4js-start (password)
+  "Start neo4j shell comint mode.
+
+PASSWORD is read using ‘read-passwd’ id ‘n4js-password’ is non-nil."
+  (interactive
+   (list
+    (cond
+     ((stringp n4js-password)
+      n4js-password)
+     (n4js-password
+      (read-passwd "Neo4j password: ")))))
+  ;; this'll set the command in all buffers with the same major mode,
+  ;; but I think that's okay
+  (local-set-key n4js-switch-to-buffer-key #'n4js-switch-to-buffer)
+  (let ((buffer (comint-check-proc n4js-buffer-name)))
+    ;; pop to the `n4js-buffer-name' buffer if the process is dead, the
     ;; buffer is missing or it's got the wrong mode.
     (pop-to-buffer-same-window
      (if (or buffer (not (derived-mode-p 'n4js-mode))
              (comint-check-proc (current-buffer)))
-         (get-buffer-create "*neo4j-shell*")
+         (get-buffer-create n4js-buffer-name)
        (current-buffer)))
     ;; create the comint process if there is no buffer.
     (unless buffer
-      (apply 'make-comint-in-buffer "neo4j-shell" nil n4js-cli-program nil
-             n4js-cli-arguments)
+      (let ((auth-args (when password
+			 (list "-u" (or n4js-username "neo4j") "-p" password))))
+	(apply 'make-comint-in-buffer n4js-process-name n4js-buffer-name n4js-cli-program
+	       nil
+	       (append auth-args n4js-cli-other-arguments)))
       (n4js-mode))))
 
 ;;; Send the query string to neo4j shell to execute
 (defun n4js-send-string (string)
-  "Send the input string to neo4j shell process."
-  (if (not (comint-check-proc "*neo4j-shell*"))
+  "Send the STRING to neo4j shell process."
+  (interactive "sNeo4j query: ")
+  (if (not (comint-check-proc n4js-buffer-name))
       (message "No neo4j shell process started")
     (progn
-      (process-send-string "*neo4j-shell*" (concat string "\n"))
+      (process-send-string n4js-process-name (concat string "\n"))
       (when n4js-pop-to-buffer
         (n4js-pop-to-buffer)))))
 
 (defun n4js-send-region (beg end)
-  "Send the region from beg to end to neo4j process."
+  "Send the region from BEG to END to neo4j process."
+  (interactive "r")
   (let ((string (buffer-substring-no-properties beg end)))
     (n4js-send-string string)))
 
@@ -105,6 +154,7 @@
          (end (region-end)))
     (n4js-send-region beg end)))
 
+
 (defun n4js-send-buffer ()
   "Send the current buffer to neo4j shell process."
   (interactive)
@@ -112,16 +162,18 @@
          (end (point-max)))
     (n4js-send-region beg end)))
 
-(defun n4js-send-paragraph ()
-  "Send the current paragraph to neo4j shell process."
-  (interactive)
-  (let ((beg (save-excursion
-               (backward-paragraph)
-               (point)))
-        (end (save-excursion
-               (forward-paragraph)
-               (point))))
-    (n4js-send-region beg end)))
+
+(defun n4js-send-paragraph (beg end)
+  "Send the current paragraph to neo4j shell process.
+
+BEG and END delimit the paragraph to be sent."
+  (interactive (list (save-excursion
+		       (backward-paragraph)
+		       (point))
+		     (save-excursion
+		       (forward-paragraph)
+		       (point))))
+  (n4js-send-region beg end))
 
 (defun n4js-send-region-or-buffer ()
   "Send the selected region if presented, otherwise, send the whole buffer."
@@ -135,15 +187,16 @@
   (interactive)
   (if (use-region-p)
       (n4js-send-current-region)
-    (n4js-send-paragraph)))
+    (call-interactively #'n4js-send-paragraph)))
 
 ;;;###autoload
 (defun n4js-switch-to-buffer ()
   "Switch to neo4j shell buffer."
   (interactive)
-  (if (comint-check-proc "*neo4j-shell*")
-      (switch-to-buffer "*neo4j-shell*")
-    (n4js-start)))
+  (if (comint-check-proc n4js-buffer-name)
+      (switch-to-buffer n4js-buffer-name)
+    (call-interactively #'n4js-start)))
+
 
 (provide 'n4js)
 
