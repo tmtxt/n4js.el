@@ -37,36 +37,55 @@
 (require 'cypher-mode)
 
 ;;; Code:
-(defvar n4js-cli-program "cypher-shell"
-  "The cli program to start neo4j cypher shell.")
+(defgroup n4js nil
+  "Customization group for cypher-shell (part of Neo4j)."
+  :prefix 'n4js-
+  :group 'Applications)
 
-(defvar n4js-username "neo4j")
+(defcustom n4js-cli-program "cypher-shell"
+  "The CLI program to start Neo4j cypher shell."
+  :type 'string)
 
-(defvar n4js-password t
+(defcustom n4js-username "neo4j"
+  "The Neo4j username to use."
+  :type 'string)
+
+(defcustom n4js-password t
   "Neo4j password for ‘n4js-username’.
-If t, password will be read interactively. If nil, do not use
-password.")
 
-(defvar n4js-cli-other-arguments nil
-  "List of command line arguments to pass to neo4j cypher shell cli program.")
+If t, password will be read interactively.  If nil, do not use
+password."
+  :type '(choice (const :tag "No password" nil)
+		 (const :tag "Ask for password" t)
+		 (string :tag "Password")))
+
+(defcustom n4js-cli-other-arguments nil
+  "List of command line arguments to pass to neo4j cypher shell cli program."
+  :type '(repeat string))
 
 (defvar n4js-font-lock-keywords cypher-font-lock-keywords
   "Font lock keywords list, default is to taken from cypher-mode.")
 
-(defvar n4js-pop-to-buffer nil
-  "Whether to pop up the neo4j shell buffer after sending command to execute.")
+(defcustom n4js-pop-to-buffer nil
+  "Whether to pop up the neo4j shell buffer after sending command to execute."
+  :type 'boolean)
 
-(defvar n4js-pop-to-buffer-function 'pop-to-buffer
-  "The function to pop up the neo4j shell buffer.")
+(defcustom n4js-pop-to-buffer-function 'pop-to-buffer
+  "The function to pop up the neo4j shell buffer."
+  :type 'function)
 
-(defvar n4js-buffer-name "*cypher-shell*"
-  "Buffer name for cypher shell.")
+(defcustom n4js-buffer-name "*cypher-shell*"
+  "Buffer name for cypher shell."
+  :type 'string)
 
-(defvar n4js-process-name "neo4j-cypher-shell"
-  "Buffer name for cypher shell.")
+(defcustom n4js-process-name "neo4j-cypher-shell"
+  "Buffer name for cypher shell."
+  :type 'string)
 
-(defvar n4js-switch-to-buffer-key (kbd "C-c c-s")
-  "Key that calls ‘n4js-switch-to-buffer’ in the buffer where ‘n4js-start’ was invoked.")
+(defcustom n4js-switch-to-buffer-key (kbd "C-c c-s")
+  "Key that calls ‘n4js-switch-to-buffer’ in the buffer where ‘n4js-start’ was invoked."
+  :type 'key-sequence)
+
 
 (define-derived-mode n4js-mode comint-mode "Neo4j Cypher Shell"
   "Major mode for `n4js-start'."
