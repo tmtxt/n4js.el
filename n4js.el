@@ -3,7 +3,8 @@
 ;;; Copyright (C) 2015 TruongTx
 
 ;;; Author: TruongTx <me@truongtx.me>
-;;; Version: 0.1
+;;; Maintainer: odanoburu <bcclaro+emacs@gmail.com>
+;;; Version: 0.2
 ;;; URL: https://github.com/tmtxt/n4js.el
 ;;; Package-Requires: ((emacs "24") (cypher-mode "0"))
 ;;; Keywords: neo4j, shell, comint
@@ -44,6 +45,10 @@
 
 (defcustom n4js-cli-program "cypher-shell"
   "The CLI program to start Neo4j cypher shell."
+  :type 'string)
+
+(defcustom n4js-address "bolt://localhost:7687"
+  "Address and port to connect to."
   :type 'string)
 
 (defcustom n4js-username "neo4j"
@@ -129,25 +134,33 @@ PASSWORD is read using ‘read-passwd’ id ‘n4js-password’ is non-nil."
       n4js-password)
      (n4js-password
       (read-passwd "Neo4j password: ")))))
+  (message "Logging as ‘%s’ at ‘%s’" n4js-username n4js-address)
   ;; this'll set the command in all buffers with the same major mode,
   ;; but I think that's okay
   (local-set-key n4js-switch-to-buffer-key #'n4js-switch-to-buffer)
-  (let ((buffer (comint-check-proc n4js-buffer-name)))
-    ;; pop to the `n4js-buffer-name' buffer if the process is dead, the
-    ;; buffer is missing or it's got the wrong mode.
-    (pop-to-buffer-same-window
-     (if (or buffer (not (derived-mode-p 'n4js-mode))
-             (comint-check-proc (current-buffer)))
-         (get-buffer-create n4js-buffer-name)
-       (current-buffer)))
-    ;; create the comint process if there is no buffer.
-    (unless buffer
-      (let ((auth-args (when password
-			 (list "-u" (or n4js-username "neo4j") "-p" password))))
+  ;; NOTE: we build the argument list to the cypher-shell here so that we can use
+  ;; buffer-, file-, and directory-local variables to change addresses, usernames,
+  ;; and passwords
+  (let* ((auth-args (when password
+		      (list "--username" n4js-username
+			    "--password" password)))
+	 (cli-args (append (list "--address" n4js-address)
+			   auth-args
+			   n4js-cli-other-arguments)))
+    (let ((buffer (comint-check-proc n4js-buffer-name)))
+      ;; pop to the `n4js-buffer-name' buffer if the process is dead, the
+      ;; buffer is missing or it's got the wrong mode.
+      (pop-to-buffer-same-window
+       (if (or buffer (not (derived-mode-p 'n4js-mode))
+               (comint-check-proc (current-buffer)))
+           (get-buffer-create n4js-buffer-name)
+	 (current-buffer)))
+      ;; create the comint process if there is no buffer.
+      (unless buffer
 	(apply 'make-comint-in-buffer n4js-process-name n4js-buffer-name n4js-cli-program
 	       nil
-	       (append auth-args n4js-cli-other-arguments)))
-      (n4js-mode))))
+	       cli-args)
+	(n4js-mode)))))
 
 ;;; Send the query string to neo4j shell to execute
 (defun n4js-send-string (string)
