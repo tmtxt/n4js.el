@@ -1,13 +1,13 @@
 ;;; n4js.el --- Neo4j Shell
 
-;;; Copyright (C) 2015 TruongTx
+;;; Copyright (C) 2020 TruongTx
 
 ;;; Author: TruongTx <me@truongtx.me>
 ;;; Maintainer: odanoburu <bcclaro+emacs@gmail.com>
 ;;; Version: 0.2
-;;; URL: https://github.com/tmtxt/n4js.el
-;;; Package-Requires: ((emacs "24") (cypher-mode "0"))
-;;; Keywords: neo4j, shell, comint
+;;; URL: https://github.com/odanoburu/n4js.el
+;;; Package-Requires: ((emacs "25.1"))
+;;; Keywords: languages, terminals
 
 ;;; License:
 
@@ -26,16 +26,26 @@
 
 ;;; Commentary:
 
-;; Put this file in your Emacs Lisp path (e.g. ~/.emacs.d/site-lisp)
-;; and add the following line to your .emacs:
+;; This package provides a comint mode for the cypher shell, a client used to
+;; communicate with the Neo4j database.  ‘n4js’ should be compatible with any other
+;; shell that uses the BOLT protocol and the Cypher query language, such as the
+;; Memgraph client.
+
+;; To install ‘n4js’ manually, put this file in your Emacs Lisp load path (see the
+;; ‘load-path’ variable) and add the following line to your configuration file:
 
 ;; (require 'n4js)
 
-;; Type M-x n4js-start to run Neo4j Shell.
-;; See also `comint-mode' to check key bindings.
+;; You may also install it from MELPA, and employ ‘use-package’ to configure it:
+
+;; (use-package n4js
+;;   :custom (n4js-user "neo4j")
+;;           (n4js-address "bolt://example.com:7867"))
+
+;; Type M-x n4js-start to run the cypher shell on a comint buffer.  See also
+;; `comint-mode' to see key bindings available to all comint buffers.
 
 (require 'comint)
-(require 'cypher-mode)
 
 ;;; Code:
 (defgroup n4js nil
@@ -64,12 +74,12 @@ password."
 		 (const :tag "Ask for password" t)
 		 (string :tag "Password")))
 
-(defcustom n4js-cli-other-arguments nil
+(defcustom n4js-cli-arguments nil
   "List of command line arguments to pass to neo4j cypher shell cli program."
   :type '(repeat string))
 
-(defvar n4js-font-lock-keywords cypher-font-lock-keywords
-  "Font lock keywords list, default is to taken from cypher-mode.")
+(defvar n4js-font-lock-keywords (if (require 'cypher-mode nil t) cypher-font-lock-keywords)
+  "Font lock keywords list, default is taken from `cypher-mode'.")
 
 (defcustom n4js-pop-to-buffer nil
   "Whether to pop up the neo4j shell buffer after sending command to execute."
@@ -87,7 +97,7 @@ password."
   "Buffer name for cypher shell."
   :type 'string)
 
-(defcustom n4js-switch-to-buffer-key (kbd "C-c c-s")
+(defcustom n4js-switch-to-buffer-key (kbd "C-c C-.")
   "Key that calls ‘n4js-switch-to-buffer’ in the buffer where ‘n4js-start’ was invoked."
   :type 'key-sequence)
 
@@ -98,7 +108,8 @@ password."
   (setq comint-prompt-read-only t)
   (define-key n4js-mode-map (kbd "<RET>") #'n4js-send-input)
   ;; font lock keywords
-  (set (make-local-variable 'font-lock-defaults) '(n4js-font-lock-keywords t)))
+  (if n4js-font-lock-keywords
+      (set (make-local-variable 'font-lock-defaults) '(n4js-font-lock-keywords t))))
 
 (defun n4js-pop-to-buffer ()
   "Pop the neo4j cypher shell buffer to the current window."
@@ -108,8 +119,8 @@ password."
   "Send input to cypher-shell process.
 
 It checks if the cypher statement is over, and if so it sends it
-to the process. If not, it accumulates the input, adding a
-newline. The arguments NO-NEWLINE and ARTIFICIAL are passed on to
+to the process.  If not, it accumulates the input, adding a
+newline.  The arguments NO-NEWLINE and ARTIFICIAL are passed on to
 ‘comind-send-input’."
   (interactive)
   (if (prog2
@@ -146,7 +157,7 @@ PASSWORD is read using ‘read-passwd’ id ‘n4js-password’ is non-nil."
 			    "--password" password)))
 	 (cli-args (append (list "--address" n4js-address)
 			   auth-args
-			   n4js-cli-other-arguments)))
+			   n4js-cli-arguments)))
     (let ((buffer (comint-check-proc n4js-buffer-name)))
       ;; pop to the `n4js-buffer-name' buffer if the process is dead, the
       ;; buffer is missing or it's got the wrong mode.
